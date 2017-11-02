@@ -111,6 +111,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Integration\BotTests.cs" />
     <Compile Include="Integration\LanguageServicesTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -122,6 +123,10 @@
     <Folder Include="Unit\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Core\Core.fsproj">
+      <Project>{717392f1-095b-4042-ac52-345b17a92554}</Project>
+      <Name>Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LanguageServices\LanguageServices.csproj">
       <Project>{7856D68A-1006-4D3D-B397-C09089FAF3D3}</Project>
       <Name>LanguageServices</Name>

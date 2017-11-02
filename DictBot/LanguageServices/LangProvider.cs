@@ -8,7 +8,7 @@ using static System.Configuration.ConfigurationManager;
 
 namespace LanguageServices
 {
-    public class LangProvider
+    public static class LangProvider
     {
         public async static Task<string> Translate(string str, string toLang)
         {
@@ -22,7 +22,7 @@ namespace LanguageServices
             return xDoc.Document.Root.Value;
         }
 
-        public async static Task<object> CheckSpelling(string str, string lang)
+        public async static Task<SpellingResponse> CheckSpelling(string str, string lang)
         {
             HttpClient client = new HttpClient();
             // TODO: hide the key from outside world
@@ -49,38 +49,38 @@ namespace LanguageServices
             }
 
             string contentString = await response.Content.ReadAsStringAsync();
-            RootObject rootObj = JsonConvert.DeserializeObject<RootObject>(contentString);
+            SpellingResponse result = JsonConvert.DeserializeObject<SpellingResponse>(contentString);
 
-            return rootObj;
-        }
+            return result;
+        }       
+    }
 
-        class Instrumentation
-        {
-            public string pingUrlBase { get; set; }
-            public string pageLoadPingUrl { get; set; }
-        }
+    //class Instrumentation
+    //{
+    //    public string pingUrlBase { get; set; }
+    //    public string pageLoadPingUrl { get; set; }
+    //}
 
-        class Suggestion
-        {
-            public string suggestion { get; set; }
-            public double score { get; set; }
-            public string pingUrlSuffix { get; set; }
-        }
+    public class Suggestion
+    {
+        public string suggestion { get; set; }
+        public double score { get; set; }
+        //public string pingUrlSuffix { get; set; }
+    }
 
-        class FlaggedToken
-        {
-            public int offset { get; set; }
-            public string token { get; set; }
-            public string type { get; set; }
-            public List<Suggestion> suggestions { get; set; }
-            public string pingUrlSuffix { get; set; }
-        }
+    public class FlaggedToken
+    {
+        public int offset { get; set; }
+        public string token { get; set; }
+        //public string type { get; set; }
+        public List<Suggestion> suggestions { get; set; }
+        //public string pingUrlSuffix { get; set; }
+    }
 
-        class RootObject
-        {
-            public string _type { get; set; }
-            public Instrumentation instrumentation { get; set; }
-            public List<FlaggedToken> flaggedTokens { get; set; }
-        }
+    public class SpellingResponse
+    {
+        //public string _type { get; set; }
+        //public Instrumentation instrumentation { get; set; }
+        public List<FlaggedToken> flaggedTokens { get; set; }
     }
 }
