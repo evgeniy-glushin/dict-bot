@@ -18,13 +18,22 @@ module rec Bot =
     let correctSpelling txt lang =
         async {
             let! (spelling: SpellingResponse) = checkSpelling txt lang
-            let tokens = spelling.flaggedTokens
+            let tokens = spelling.flaggedTokens.AsEnumerable() |> Seq.toList
 
-            return if tokens.Count > 0 then tokens.First().suggestions.First().suggestion
-                   else txt
+            let buildGuess () = 
+                tokens
+                |> List.sortBy (fun x -> x.offset)
+                |> List.map (fun x -> x.suggestions.AsEnumerable() 
+                                        |> Seq.toList 
+                                        |> Seq.sortByDescending (fun x -> x.score)
+                                        |> Seq.head)
+                |> List.map (fun x -> x.suggestion)
+                |> List.reduce (fun acc elem -> acc + " " + elem)
+
+            return if List.length tokens > 0 then buildGuess()
+                   else txt            
         }
-       
-    
+   
     let private checkSpelling txt lang =
         LangProvider.CheckSpelling(txt, lang) |> Async.AwaitTask
     
