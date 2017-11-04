@@ -11,7 +11,7 @@ namespace Tests.Integration
         public async Task Respond_single_correct_word()
         {
             // Act
-            var translation = await respond("building");
+            var translation = await respond(CreatePayload("building"));
 
             // Assert
             Assert.AreEqual("здание", translation.ToLower());
@@ -24,7 +24,7 @@ namespace Tests.Integration
             var misspelledWord = "buildng";
 
             // Act
-            var translation = await respond(misspelledWord);
+            var translation = await respond(CreatePayload(misspelledWord));
 
             // Assert
             Assert.AreEqual("building - здание", translation.ToLower());
@@ -37,7 +37,7 @@ namespace Tests.Integration
             var correctWords = "Hello World";
 
             // Act
-            var translation = await respond(correctWords);
+            var translation = await respond(CreatePayload(correctWords));
 
             // Assert
             Assert.AreEqual("всем привет", translation.ToLower());
@@ -50,7 +50,7 @@ namespace Tests.Integration
             var misspelledWords = "Hollo Worlda";
 
             // Act
-            var translation = await respond(misspelledWords);
+            var translation = await respond(CreatePayload(misspelledWords));
 
             // Assert
             Assert.AreEqual("hello world - всем привет", translation.ToLower());
@@ -63,7 +63,7 @@ namespace Tests.Integration
             var sentence = "from simple sentences to compount and complex sentences";
 
             // Act
-            var translation = await respond(sentence);
+            var translation = await respond(CreatePayload(sentence));
 
             // Assert
             Assert.AreEqual("from simple sentences to compound and complex sentences - от простых предложений для составных и сложных предложений", translation.ToLower());
@@ -76,10 +76,13 @@ namespace Tests.Integration
             var sentence = "привет мир";
 
             // Act
-            var translation = await respond(sentence);
+            var translation = await respond(CreatePayload(sentence));
 
             // Assert
             Assert.AreEqual("hello world", translation.ToLower());
         }
+
+        TranslatePayload CreatePayload(string str) =>
+            createPayload("test_id", "test_name", str);
     }
 }

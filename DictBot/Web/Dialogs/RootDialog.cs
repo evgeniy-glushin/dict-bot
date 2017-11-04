@@ -19,9 +19,11 @@ namespace Web.Dialogs
         private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result)
         {
             var activity = await result as Activity;
-            
+
             // return our reply to the user
-            await context.PostAsync(await respond(activity.Text));
+
+            var payload = createPayload(activity.From.Id, activity.From.Name, activity.Text);
+            await context.PostAsync(await respond(payload));
 
             context.Wait(MessageReceivedAsync);
         }
