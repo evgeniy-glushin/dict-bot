@@ -55,5 +55,18 @@ namespace Tests.Integration
             // Assert
             Assert.AreEqual("hello world - всем привет", translation.ToLower());
         }
+
+        [Test]
+        public async Task Respond_given_sentence_with_some_misspelled_words()
+        {
+            // Arrange 
+            var sentence = "from simple sentences to compount and complex sentences";
+
+            // Act
+            var translation = await respond(sentence);
+
+            // Assert
+            Assert.AreEqual("from simple sentences to compound and complex sentences - от простых предложений для составных и сложных предложений", translation.ToLower());
+        }
     }
 }
