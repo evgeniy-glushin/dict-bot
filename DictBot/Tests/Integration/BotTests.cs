@@ -68,5 +68,18 @@ namespace Tests.Integration
             // Assert
             Assert.AreEqual("from simple sentences to compound and complex sentences - от простых предложений для составных и сложных предложений", translation.ToLower());
         }
+
+        [Test]
+        public async Task Respond_translate_ru_to_en()
+        {
+            // Arrange 
+            var sentence = "привет мир";
+
+            // Act
+            var translation = await respond(sentence);
+
+            // Assert
+            Assert.AreEqual("hello world", translation.ToLower());
+        }
     }
 }
