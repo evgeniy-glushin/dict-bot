@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
+using static BotModels;
 using static Core.Bot;
 
 namespace Web.Dialogs

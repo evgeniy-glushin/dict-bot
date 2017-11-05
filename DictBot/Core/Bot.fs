@@ -3,19 +3,30 @@
 open LanguageServices
 open System.Linq
 open System.Text.RegularExpressions
+open DataUtils
+open BotModels
 
 module rec Bot =    
     let respond payload =
         async {
-            let srcLang = detectLang payload.Text
-            let trgLang = targetLang srcLang
+            try 
+                let reqLang = detectLang payload.Text
+                let respLang = targetLang reqLang
             
-            let! correctedSpelling = correctSpelling payload.Text srcLang      
-            let! translation = translate correctedSpelling trgLang
+                let! correctedSpelling = correctSpelling payload.Text reqLang      
+                let! translation = translate correctedSpelling respLang
+                            
+                let buildResponse () =
+                    let isSpellingCorrected = correctedSpelling <> payload.Text
+                    if isSpellingCorrected then correctedSpelling + " - " + translation
+                    else translation
 
-            let isSpellingCorrected = correctedSpelling <> payload.Text
-            return if isSpellingCorrected then correctedSpelling + " - " + translation
-                   else translation
+                return buildResponse()
+            with
+                | Failure msg -> 
+                    buildLogEntry payload msg |> insertLogEntry |> ignore
+                    return "Something went wrong! We are already fixing it."
+            //return ""
         } |> Async.StartAsTask
         
     let correctSpelling str lang =
@@ -23,10 +34,10 @@ module rec Bot =
             let! (spelling: SpellingResponse) = checkSpelling str lang
             let tokens = spelling.flaggedTokens.AsEnumerable() |> Seq.toList
             
-            return replace tokens str
+            return replaceAll tokens str
         }
    
-    let rec private replace (tokens: FlaggedToken list) (str: string) =
+    let rec private replaceAll (tokens: FlaggedToken list) (str: string) =
         let replaceToken (token: FlaggedToken) (suggestions: Suggestion list) =
             let bestSuggestion () = 
                 suggestions |> List.sortByDescending (fun x -> x.score) |> List.head
@@ -39,10 +50,10 @@ module rec Bot =
         | [] -> str
         | head :: tail -> 
             let suggestions = head.suggestions.AsEnumerable() |> Seq.toList
-            replaceToken head suggestions |> replace tail
+            replaceToken head suggestions |> replaceAll tail
                             
-    let private detectLang str =
-        // TODO: improve
+    let private detectLang (str: string) =
+        // TODO: improve. It doesn't work right
         match Regex.IsMatch(str.Trim().Replace(" ", ""), "^[a-zA-Z0-9]*$") with
         | true -> "en"
         | _ -> "ru"     
@@ -56,8 +67,3 @@ module rec Bot =
     
     let private translate str lang =
         LangProvider.Translate(str, lang) |> Async.AwaitTask
-
-    let createPayload id name txt = 
-        { UserId = id; UserName = name; Text = txt }
-
-    type TranslatePayload = { UserId: string; UserName: string; Text: string }

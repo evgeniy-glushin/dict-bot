@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System.Threading.Tasks;
+using static BotModels;
 using static Core.Bot;
 
 namespace Tests.Integration
