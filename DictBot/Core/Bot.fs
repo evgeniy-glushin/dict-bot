@@ -53,8 +53,9 @@ module rec Bot =
             replaceToken head suggestions |> replaceAll tail
                             
     let private detectLang (str: string) =
-        // TODO: improve. It doesn't work right
-        match Regex.IsMatch(str.Trim().Replace(" ", ""), "^[a-zA-Z0-9]*$") with
+        // TODO: improve
+        let alfabetEn = "qwertyuiopasdfghjklzxcvbnm"
+        match str.Any(fun s -> alfabetEn.Contains(s)) with
         | true -> "en"
         | _ -> "ru"     
 
