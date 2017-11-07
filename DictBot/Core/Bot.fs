@@ -15,7 +15,10 @@ module rec Bot =
             
                 let! correctedSpelling = correctSpelling payload.Text reqLang      
                 let! translation = translate correctedSpelling respLang
-                            
+                  
+                buildRequest payload.UserId payload.UserName payload.Text translation reqLang respLang 
+                |> insertRequest |> ignore
+
                 let buildResponse () =
                     let isSpellingCorrected = correctedSpelling <> payload.Text
                     if isSpellingCorrected then correctedSpelling + " - " + translation
@@ -26,7 +29,6 @@ module rec Bot =
                 | Failure msg -> 
                     buildLogEntry payload msg |> insertLogEntry |> ignore
                     return "Something went wrong! We are already fixing it."
-            //return ""
         } |> Async.StartAsTask
         
     let correctSpelling str lang =

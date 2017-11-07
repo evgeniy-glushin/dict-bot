@@ -4,6 +4,7 @@ open MongoDB.Driver
 open MongoDB.FSharp
 open BotModels
 open System
+open System.Configuration
 
 do
     Serializers.Register()
@@ -28,7 +29,7 @@ let buildLogEntry payload msg =
       CreateDate = DateTime.UtcNow }
 
 let insertLogEntry entry =
-    let client         = MongoClient()
+    let client         = buildClient ()
     let db             = client.GetDatabase "DictBot"    
     let collection = db.GetCollection<LogEntry> "Logs"     
     collection.InsertOne entry    
@@ -43,9 +44,13 @@ let buildRequest uId uName req resp reqLang respLang =
       CreateDate = DateTime.UtcNow }
 
 let insertRequest req =
-    let client         = MongoClient()
+    let client         = buildClient ()
     let db             = client.GetDatabase "DictBot"    
     let collection = db.GetCollection<BotRequest> "BotRequests"
     collection.InsertOne req
-    true          
+    true   
+    
+let buildClient (): MongoClient =
+    let conStr = ConfigurationManager.AppSettings.["ConString"]
+    MongoClient(conStr)
 
