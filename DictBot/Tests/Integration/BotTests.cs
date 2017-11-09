@@ -84,6 +84,6 @@ namespace Tests.Integration
         }
 
         TranslatePayload CreatePayload(string str) =>
-            createPayload("test_id", "test_name", str);
+            new TranslatePayload("test_id", "test_name", str);
     }
 }

@@ -2,11 +2,12 @@
 
 open LanguageServices
 open System.Linq
-open System.Text.RegularExpressions
 open DataUtils
 open BotModels
 
 module rec Bot =    
+    open System
+
     let respond payload =
         async {
             try 
@@ -16,7 +17,8 @@ module rec Bot =
                 let! correctedSpelling = correctSpelling payload.Text reqLang      
                 let! translation = translate correctedSpelling respLang
                   
-                buildRequest payload.UserId payload.UserName payload.Text translation reqLang respLang 
+                let user = { Id = payload.UserId; Name = payload.UserName }
+                { User = user; Request = payload.Text; Response = translation; RequestLang = reqLang; ResponseLang = respLang; CreateDate = DateTime.UtcNow }
                 |> insertRequest |> ignore
 
                 let buildResponse () =
@@ -27,7 +29,8 @@ module rec Bot =
                 return buildResponse()
             with
                 | Failure msg -> 
-                    buildLogEntry payload msg |> insertLogEntry |> ignore
+                    { Payload = payload; Error = msg; CreateDate = DateTime.UtcNow } 
+                    |> insertLogEntry |> ignore
                     return "Something went wrong! We are already fixing it."
         } |> Async.StartAsTask
         

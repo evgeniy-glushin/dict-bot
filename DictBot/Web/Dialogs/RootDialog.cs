@@ -23,7 +23,7 @@ namespace Web.Dialogs
 
             // return our reply to the user
 
-            var payload = createPayload(activity.From.Id, activity.From.Name, activity.Text);
+            var payload = new TranslatePayload(activity.From.Id, activity.From.Name, activity.Text);
             await context.PostAsync(await respond(payload));
 
             context.Wait(MessageReceivedAsync);
