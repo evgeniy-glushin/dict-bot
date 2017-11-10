@@ -3,36 +3,58 @@
 open LanguageServices
 open System.Linq
 open DataUtils
-open BotModels
+open Domain
+open RequestPerser
 
 module rec Bot =    
     open System
 
-    let respond payload =
-        async {
-            try 
-                let reqLang = detectLang payload.Text
-                let respLang = targetLang reqLang
+    let respondAsync payload =
+        let reqTypeRes = detectReqType payload
+
+        match reqTypeRes with
+        | Error err -> returnA err
+        | Ok req -> 
+            match req with
+            | Text _ -> translate payload
+            | Command cmd -> execCmd cmd
+        |> Async.StartAsTask     
+
+    let execCmd cmd = async {
+        return     
+            match cmd with
+            | Start -> "Welcome!"
+            | Help -> "Help"
+    }
+
+    let returnA x = async {
+        return x
+    }
+
+    let translate payload = async {
+        try 
+            let reqLang = detectLang payload.Text
+            let respLang = targetLang reqLang
             
-                let! correctedSpelling = correctSpelling payload.Text reqLang      
-                let! translation = translate correctedSpelling respLang
+            let! correctedSpelling = correctSpelling payload.Text reqLang      
+            let! translation = translateExt correctedSpelling respLang
                   
-                let user = { Id = payload.UserId; Name = payload.UserName }
-                { User = user; Request = payload.Text; Response = translation; RequestLang = reqLang; ResponseLang = respLang; CreateDate = DateTime.UtcNow }
-                |> insertRequest |> ignore
+            let user = { Id = payload.UserId; Name = payload.UserName }
+            { User = user; Request = payload.Text; Response = translation; RequestLang = reqLang; ResponseLang = respLang; CreateDate = DateTime.UtcNow }
+            |> insertRequest |> ignore
 
-                let buildResponse () =
-                    let isSpellingCorrected = correctedSpelling <> payload.Text
-                    if isSpellingCorrected then correctedSpelling + " - " + translation
-                    else translation
+            let buildResponse () =
+                let isSpellingCorrected = correctedSpelling <> payload.Text
+                if isSpellingCorrected then correctedSpelling + " - " + translation
+                else translation
 
-                return buildResponse()
-            with
-                | Failure msg -> 
-                    { Payload = payload; Error = msg; CreateDate = DateTime.UtcNow } 
-                    |> insertLogEntry |> ignore
-                    return "Something went wrong! We are already fixing it."
-        } |> Async.StartAsTask
+            return buildResponse()
+        with
+            | Failure msg -> 
+                { Payload = payload; Error = msg; CreateDate = DateTime.UtcNow } 
+                |> insertLogEntry |> ignore
+                return "Something went wrong! We are already fixing it."
+    }
         
     let correctSpelling str lang =
         async {
@@ -71,5 +93,5 @@ module rec Bot =
     let private checkSpelling str lang =
         LangProvider.CheckSpelling(str, lang) |> Async.AwaitTask
     
-    let private translate str lang =
+    let private translateExt str lang =
         LangProvider.Translate(str, lang) |> Async.AwaitTask

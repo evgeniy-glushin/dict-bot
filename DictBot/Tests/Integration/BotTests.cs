@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 using System.Threading.Tasks;
-using static BotModels;
+using static Domain;
 using static Core.Bot;
 
 namespace Tests.Integration
@@ -9,10 +9,30 @@ namespace Tests.Integration
     class BotTests
     {
         [Test]
+        public async Task Respond_start_command()
+        {
+            // Act
+            var translation = await respondAsync(CreatePayload("/start"));
+
+            // Assert
+            Assert.AreEqual("Welcome!", translation);
+        }
+
+        [Test]
+        public async Task Respond_help_command()
+        {
+            // Act
+            var translation = await respondAsync(CreatePayload("/help"));
+
+            // Assert
+            Assert.AreEqual("Help", translation);
+        }
+
+        [Test]
         public async Task Respond_single_correct_word()
         {
             // Act
-            var translation = await respond(CreatePayload("building"));
+            var translation = await respondAsync(CreatePayload("building"));
 
             // Assert
             Assert.AreEqual("здание", translation.ToLower());
@@ -25,7 +45,7 @@ namespace Tests.Integration
             var misspelledWord = "buildng";
 
             // Act
-            var translation = await respond(CreatePayload(misspelledWord));
+            var translation = await respondAsync(CreatePayload(misspelledWord));
 
             // Assert
             Assert.AreEqual("building - здание", translation.ToLower());
@@ -38,7 +58,7 @@ namespace Tests.Integration
             var correctWords = "Hello World";
 
             // Act
-            var translation = await respond(CreatePayload(correctWords));
+            var translation = await respondAsync(CreatePayload(correctWords));
 
             // Assert
             Assert.AreEqual("всем привет", translation.ToLower());
@@ -51,7 +71,7 @@ namespace Tests.Integration
             var misspelledWords = "Hollo Worlda";
 
             // Act
-            var translation = await respond(CreatePayload(misspelledWords));
+            var translation = await respondAsync(CreatePayload(misspelledWords));
 
             // Assert
             Assert.AreEqual("hello world - всем привет", translation.ToLower());
@@ -64,7 +84,7 @@ namespace Tests.Integration
             var sentence = "from simple sentences to compount and complex sentences";
 
             // Act
-            var translation = await respond(CreatePayload(sentence));
+            var translation = await respondAsync(CreatePayload(sentence));
 
             // Assert
             Assert.AreEqual("from simple sentences to compound and complex sentences - от простых предложений для составных и сложных предложений", translation.ToLower());
@@ -77,13 +97,13 @@ namespace Tests.Integration
             var sentence = "привет мир";
 
             // Act
-            var translation = await respond(CreatePayload(sentence));
+            var translation = await respondAsync(CreatePayload(sentence));
 
             // Assert
             Assert.AreEqual("hello world", translation.ToLower());
         }
 
-        TranslatePayload CreatePayload(string str) =>
-            new TranslatePayload("test_id", "test_name", str);
+        BotPayload CreatePayload(string str) =>
+            new BotPayload("test_id", "test_name", str);
     }
 }

@@ -52,7 +52,8 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="BotModels.fs" />
+    <Compile Include="Domain.fs" />
+    <Compile Include="RequestPerser.fs" />
     <Compile Include="DataUtils.fs" />
     <Compile Include="Bot.fs" />
     <Content Include="packages.config" />

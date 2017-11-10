@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
-using static BotModels;
+using static Domain;
 using static Core.Bot;
 
 namespace Web.Dialogs
@@ -22,9 +22,8 @@ namespace Web.Dialogs
             var activity = await result as Activity;
 
             // return our reply to the user
-
-            var payload = new TranslatePayload(activity.From.Id, activity.From.Name, activity.Text);
-            await context.PostAsync(await respond(payload));
+            var payload = new BotPayload(activity.From.Id, activity.From.Name, activity.Text);
+            await context.PostAsync(await respondAsync(payload));
 
             context.Wait(MessageReceivedAsync);
         }

@@ -1,8 +1,8 @@
-﻿module rec BotModels
+﻿module rec Domain
 
 open System
 
-type TranslatePayload = { 
+type BotPayload = { 
     UserId: string 
     UserName: string 
     Text: string }
@@ -19,7 +19,15 @@ type BotRequest = {
     ResponseLang: string
     CreateDate: DateTime }
 
+type RequestType =
+    | Command of Command
+    | Text of string
+
+type Command =
+    | Start
+    | Help
+    
 type LogEntry = { 
-    Payload: TranslatePayload
+    Payload: BotPayload
     Error: string 
     CreateDate: DateTime }
