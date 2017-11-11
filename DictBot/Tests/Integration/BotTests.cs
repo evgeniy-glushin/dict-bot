@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using static Domain;
 using static Core.Bot;
 using static DataUtils;
+using System.Linq;
 
 namespace Tests.Integration
 {
@@ -13,6 +14,23 @@ namespace Tests.Integration
         public void BeforeEach()
         {
             dropDatabase();
+        }
+
+        [Test]
+        public async Task Respond_should_not_add_word_to_dictionary_when_exists()
+        {
+            // Arrange
+            var word = "building";
+
+            // Act
+            var translation1 = await respondAsync(CreatePayload(word));
+            var translation2 = await respondAsync(CreatePayload(word));
+
+            // Assert
+            Assert.AreEqual(translation1, translation2);
+
+            var words = tryFindWords(word);
+            Assert.AreEqual(1, words.Count());
         }
 
         [Test]
@@ -29,6 +47,16 @@ namespace Tests.Integration
 
             Assert.IsNotNull(savedWord);
             Assert.AreEqual(word, savedWord.Word.ToLower());
+        }
+
+        [Test]
+        public async Task Respond_unknown_command()
+        {
+            // Act
+            var translation = await respondAsync(CreatePayload("/unknown"));
+
+            // Assert
+            Assert.AreEqual("unknown command", translation);
         }
 
         [Test]

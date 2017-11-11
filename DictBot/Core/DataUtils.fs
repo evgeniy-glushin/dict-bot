@@ -1,17 +1,13 @@
 ﻿module rec DataUtils
 
 open MongoDB.Driver
-open MongoDB.FSharp
 open Domain
 open System
 open System.Configuration
-open MongoDB.Driver.Builders
 
 // NOTE: isn't working
 //do
 //    Serializers.Register()
-
-//let buildDictionaryWord uId =
 
 // TODO: return Option type
 let tryFindWord word =
@@ -21,6 +17,20 @@ let tryFindWord word =
     let filter = Builders<Dictionary>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word));
     collection.Find(filterDefinition).Limit(Nullable<int>(1)).FirstOrDefault()
+
+let tryFindWordOpt word =
+    let res = tryFindWord word
+    if isNotNull res then Some res  
+    else None 
+
+// TODO: consider refactoring
+let tryFindWords word =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<Dictionary> "Dictionary"
+    let filter = Builders<Dictionary>.Filter
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word));
+    collection.Find(filterDefinition).ToEnumerable()
 
 let insertNewWord word =
     let client = buildClient ()
@@ -50,5 +60,9 @@ let private buildClient (): MongoClient =
 let dropDatabase () =
     let client = MongoClient()
     let db = client.GetDatabase "DictBot"    
-    db.DropCollection "BotRequests"
+    //db.DropCollection "BotRequests"
     db.DropCollection "Dictionary"
+
+
+let isNotNull x =
+    Object.ReferenceEquals(null, x) |> not

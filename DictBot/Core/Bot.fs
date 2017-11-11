@@ -27,7 +27,7 @@ module rec Bot =
             | Help -> "Help"
     }
 
-    let returnA x = async {
+    let returnA (x: 'a) = async {
         return x
     }
 
@@ -36,15 +36,20 @@ module rec Bot =
             let reqLang = detectLang payload.Text
             let respLang = targetLang reqLang
             
-            let! correctedSpelling = correctSpelling payload.Text reqLang      
-            let! translation = translateExt correctedSpelling respLang
-                  
             let user = { Id = payload.UserId; Name = userName payload.UserName }
+            let! correctedSpelling = correctSpelling payload.Text reqLang      
+            let! translation =
+                match tryFindWordOpt correctedSpelling with
+                | Some x -> x.Trans |> Seq.sortByDescending (fun y -> y.Score) |> Seq.map (fun y -> y.Text) |> Seq.head |> returnA 
+                | None -> async {
+                            let! trans = translateExt correctedSpelling respLang
+                            { UserId = user.Id; Word = correctedSpelling; Trans = [{ Text = trans; Score = 1. }]; Lang = reqLang; TransLang = respLang; Trained = 0; Succeeded = 0; CreateDate = DateTime.UtcNow; Sourse = "Bot"; Version = "Azure V2" }
+                            |> insertNewWord |> ignore
+                            return trans 
+                        }                      
+            
             { User = user; Request = payload.Text; Response = translation; RequestLang = reqLang; ResponseLang = respLang; CreateDate = DateTime.UtcNow }
             |> insertRequest |> ignore
-
-            { UserId = user.Id; Word = correctedSpelling; Trans = [{ Text = translation; Score = 1. }]; Lang = reqLang; TransLang = respLang; Trained = 0; Succeeded = 0; CreateDate = DateTime.UtcNow; Sourse = "Bot"; Version = "Azure V2" }
-            |> insertNewWord |> ignore
 
             let buildResponse () =
                 let isSpellingCorrected = correctedSpelling <> payload.Text

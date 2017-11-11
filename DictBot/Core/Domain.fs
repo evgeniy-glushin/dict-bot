@@ -3,17 +3,17 @@
 open System
 open MongoDB.Bson.Serialization.Attributes
 
-type BotPayload = { 
-    UserId: string 
+type BotPayload =  
+  { UserId: string 
     UserName: string
     Text: string }
 
-type User = { 
-    Id: string
+type User =  
+  { Id: string
     Name: string }
 
-type BotRequest = { 
-    User: User
+type BotRequest =  
+  { User: User
     Request: string 
     Response: string
     RequestLang: string 
@@ -21,8 +21,8 @@ type BotRequest = {
     CreateDate: DateTime }
 
 [<BsonIgnoreExtraElements>]
-type Dictionary = {
-    UserId: string
+type Dictionary = 
+  { UserId: string
     Word: string 
     Trans: Word seq
     Lang: string
@@ -33,30 +33,22 @@ type Dictionary = {
     Sourse: string
     Version: string }
 
-type Word = {
-    Text: string
+type Word = 
+  { Text: string
     Score: double }
 
-type LearningWord = {
-    Word: Word
+type LearningWord = 
+  { Word: Word
     Succeeded: bool
     Attempts: int }
 
-type LearningSession = {
-    UserId: string
+type LearningSession = 
+  { UserId: string
     Step: int
     Words: LearningWord list }
 
 type Session =
     | Learning of LearningSession
-
-//type Session = {
-//    UserId: string
-//    Type: SessionType
-//    Step: int }
-
-//type SessionType = 
-//    | Learning
 
 type RequestType =
     | Command of Command
@@ -65,8 +57,9 @@ type RequestType =
 type Command =
     | Start
     | Help
+    //| Learn
     
-type LogEntry = { 
-    Payload: BotPayload
+type LogEntry =  
+  { Payload: BotPayload
     Error: string 
     CreateDate: DateTime }
