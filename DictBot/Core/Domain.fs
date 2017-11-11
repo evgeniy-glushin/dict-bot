@@ -1,10 +1,11 @@
 ﻿module rec Domain
 
 open System
+open MongoDB.Bson.Serialization.Attributes
 
 type BotPayload = { 
     UserId: string 
-    UserName: string 
+    UserName: string
     Text: string }
 
 type User = { 
@@ -18,6 +19,44 @@ type BotRequest = {
     RequestLang: string 
     ResponseLang: string
     CreateDate: DateTime }
+
+[<BsonIgnoreExtraElements>]
+type Dictionary = {
+    UserId: string
+    Word: string 
+    Trans: Word seq
+    Lang: string
+    TransLang: string
+    Trained: int
+    Succeeded: int
+    CreateDate: DateTime 
+    Sourse: string
+    Version: string }
+
+type Word = {
+    Text: string
+    Score: double }
+
+type LearningWord = {
+    Word: Word
+    Succeeded: bool
+    Attempts: int }
+
+type LearningSession = {
+    UserId: string
+    Step: int
+    Words: LearningWord list }
+
+type Session =
+    | Learning of LearningSession
+
+//type Session = {
+//    UserId: string
+//    Type: SessionType
+//    Step: int }
+
+//type SessionType = 
+//    | Learning
 
 type RequestType =
     | Command of Command

@@ -9,13 +9,13 @@ open RequestPerser
 module rec Bot =    
     open System
 
-    let respondAsync payload =
+    let respondAsync (payload: BotPayload) =
         let reqTypeRes = detectReqType payload
 
         match reqTypeRes with
         | Error err -> returnA err
-        | Ok req -> 
-            match req with
+        | Ok request -> 
+            match request with
             | Text _ -> translate payload
             | Command cmd -> execCmd cmd
         |> Async.StartAsTask     
@@ -39,9 +39,12 @@ module rec Bot =
             let! correctedSpelling = correctSpelling payload.Text reqLang      
             let! translation = translateExt correctedSpelling respLang
                   
-            let user = { Id = payload.UserId; Name = payload.UserName }
+            let user = { Id = payload.UserId; Name = userName payload.UserName }
             { User = user; Request = payload.Text; Response = translation; RequestLang = reqLang; ResponseLang = respLang; CreateDate = DateTime.UtcNow }
             |> insertRequest |> ignore
+
+            { UserId = user.Id; Word = correctedSpelling; Trans = [{ Text = translation; Score = 1. }]; Lang = reqLang; TransLang = respLang; Trained = 0; Succeeded = 0; CreateDate = DateTime.UtcNow; Sourse = "Bot"; Version = "Azure V2" }
+            |> insertNewWord |> ignore
 
             let buildResponse () =
                 let isSpellingCorrected = correctedSpelling <> payload.Text
@@ -55,6 +58,10 @@ module rec Bot =
                 |> insertLogEntry |> ignore
                 return "Something went wrong! We are already fixing it."
     }
+
+    let userName name =
+        if String.IsNullOrEmpty name then ""
+        else name
         
     let correctSpelling str lang =
         async {

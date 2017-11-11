@@ -2,12 +2,35 @@
 using System.Threading.Tasks;
 using static Domain;
 using static Core.Bot;
+using static DataUtils;
 
 namespace Tests.Integration
 {
     [TestFixture]
     class BotTests
     {
+        [SetUp]
+        public void BeforeEach()
+        {
+            dropDatabase();
+        }
+
+        [Test]
+        public async Task Respond_should_add_word_to_dictionary()
+        {
+            // Arrange
+            var word = "building";
+
+            // Act
+            var translation = await respondAsync(CreatePayload(word));
+
+            // Assert
+            var savedWord = tryFindWord(word);
+
+            Assert.IsNotNull(savedWord);
+            Assert.AreEqual(word, savedWord.Word.ToLower());
+        }
+
         [Test]
         public async Task Respond_start_command()
         {

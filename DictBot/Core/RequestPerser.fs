@@ -3,7 +3,7 @@
 open System
 open Domain
 
-let detectReqType payload =
+let detectReqType (payload: BotPayload) =
     // TODO: test null case
     let txtToTest = payload.Text.Trim().ToLower()
     match mightBeCommand txtToTest with
