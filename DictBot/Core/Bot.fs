@@ -17,17 +17,30 @@ module rec Bot =
         | Ok request -> 
             match request with
             | Text _ -> translate payload
-            | Command cmd -> execCmd cmd
+            | Command cmd -> execCmd cmd payload.UserId
         |> Async.StartAsTask     
 
-    let execCmd cmd = async {
+    let execCmd cmd uid = async {
         return     
             match cmd with
             | Start -> "Welcome!"
             | Help -> "Help"
+            | Learn -> startLearningSession uid
     }
 
-    let returnA (x: 'a) = async {
+    let startLearningSession uid =
+        let capacity = 4
+        
+        let words = 
+            popWords capacity uid
+            |> Seq.map (fun x -> { Word = x.Word; Trans = x.Trans; Attempts = 0; Succeeded = false })
+        
+        { UserId = uid; Step = 0; CreateDate = DateTime.UtcNow; IsActive = true; Words = words }
+        |> insertSession |> ignore
+
+        "Not enough words"
+
+    let returnA x = async {
         return x
     }
 
@@ -39,10 +52,11 @@ module rec Bot =
             let user = { Id = payload.UserId; Name = userName payload.UserName }
             let! correctedSpelling = correctSpelling payload.Text reqLang      
             let! translation =
-                match tryFindWordOpt correctedSpelling with
+                match (tryFindWordOpt correctedSpelling user.Id) with
                 | Some x -> x.Trans |> Seq.sortByDescending (fun y -> y.Score) |> Seq.map (fun y -> y.Text) |> Seq.head |> returnA 
                 | None -> async {
                             let! trans = translateExt correctedSpelling respLang
+                            // TODO: check if the word is good enough to save
                             { UserId = user.Id; Word = correctedSpelling; Trans = [{ Text = trans; Score = 1. }]; Lang = reqLang; TransLang = respLang; Trained = 0; Succeeded = 0; CreateDate = DateTime.UtcNow; Sourse = "Bot"; Version = "Azure V2" }
                             |> insertNewWord |> ignore
                             return trans 

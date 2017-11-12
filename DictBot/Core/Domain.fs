@@ -38,17 +38,21 @@ type Word =
     Score: double }
 
 type LearningWord = 
-  { Word: Word
+  { Word: string
+    Trans: Word seq
     Succeeded: bool
     Attempts: int }
 
+[<BsonIgnoreExtraElements>]
 type LearningSession = 
   { UserId: string
     Step: int
-    Words: LearningWord list }
+    CreateDate: DateTime
+    IsActive: bool
+    Words: LearningWord seq }
 
-type Session =
-    | Learning of LearningSession
+//type Session =
+//    | Learning of LearningSession
 
 type RequestType =
     | Command of Command
@@ -57,7 +61,7 @@ type RequestType =
 type Command =
     | Start
     | Help
-    //| Learn
+    | Learn
     
 type LogEntry =  
   { Payload: BotPayload

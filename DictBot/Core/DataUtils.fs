@@ -4,32 +4,70 @@ open MongoDB.Driver
 open Domain
 open System
 open System.Configuration
+open MongoDB.Bson
+
+// TODO: make all asynchronous 
 
 // NOTE: isn't working
 //do
 //    Serializers.Register()
 
-// TODO: return Option type
-let tryFindWord word =
+let insertSession session =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<LearningSession> "Sessions"
+    collection.InsertOne session    
+    true
+
+let popWords count uid =
     let client = buildClient ()
     let db = client.GetDatabase "DictBot"    
     let collection = db.GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
-    let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word));
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), uid));
+
+    collection.Find(filterDefinition)
+              .SortBy(fun x -> x.Succeeded :> Object)
+              .ThenByDescending(fun x -> x.CreateDate :> Object)
+              .Limit(Nullable<int>(count))
+              .ToEnumerable()
+
+let tryFindSession uid =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<LearningSession> "Sessions"
+    let filter = Builders<LearningSession>.Filter
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), uid),
+                                      filter.Eq((fun x -> x.IsActive), true));
+
+    collection.Find(filterDefinition)
+              .SortByDescending(fun x -> x.CreateDate :> Object)
+              .Limit(Nullable<int>(1))
+              .FirstOrDefault()
+
+// TODO: return Option type
+let tryFindWord word uid =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<Dictionary> "Dictionary"
+    let filter = Builders<Dictionary>.Filter
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word),
+                                      filter.Eq((fun x -> x.UserId), uid));
     collection.Find(filterDefinition).Limit(Nullable<int>(1)).FirstOrDefault()
 
-let tryFindWordOpt word =
-    let res = tryFindWord word
+let tryFindWordOpt word uid =
+    let res = tryFindWord word uid
     if isNotNull res then Some res  
     else None 
 
 // TODO: consider refactoring
-let tryFindWords word =
+let tryFindWords word uid =
     let client = buildClient ()
     let db = client.GetDatabase "DictBot"    
     let collection = db.GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
-    let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word));
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word),
+                                      filter.Eq((fun x -> x.UserId), uid));
     collection.Find(filterDefinition).ToEnumerable()
 
 let insertNewWord word =
@@ -62,7 +100,6 @@ let dropDatabase () =
     let db = client.GetDatabase "DictBot"    
     //db.DropCollection "BotRequests"
     db.DropCollection "Dictionary"
-
 
 let isNotNull x =
     Object.ReferenceEquals(null, x) |> not

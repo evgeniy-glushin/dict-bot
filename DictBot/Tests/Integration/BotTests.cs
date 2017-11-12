@@ -4,6 +4,7 @@ using static Domain;
 using static Core.Bot;
 using static DataUtils;
 using System.Linq;
+using System;
 
 namespace Tests.Integration
 {
@@ -17,36 +18,66 @@ namespace Tests.Integration
         }
 
         [Test]
-        public async Task Respond_should_not_add_word_to_dictionary_when_exists()
+        public async Task LearnCommand_less_than_5_words()
         {
             // Arrange
-            var word = "building";
 
             // Act
-            var translation1 = await respondAsync(CreatePayload(word));
-            var translation2 = await respondAsync(CreatePayload(word));
 
             // Assert
-            Assert.AreEqual(translation1, translation2);
-
-            var words = tryFindWords(word);
-            Assert.AreEqual(1, words.Count());
         }
 
         [Test]
-        public async Task Respond_should_add_word_to_dictionary()
+        public async Task LearnCommand_takes_latest_words()
         {
             // Arrange
-            var word = "building";
 
             // Act
-            var translation = await respondAsync(CreatePayload(word));
 
             // Assert
-            var savedWord = tryFindWord(word);
+        }
 
-            Assert.IsNotNull(savedWord);
-            Assert.AreEqual(word, savedWord.Word.ToLower());
+        [Test]
+        public async Task LearnCommand_learned_words_are_not_in_the_list()
+        {
+            // Arrange
+            
+            // Act
+            
+            // Assert
+        }
+
+        [Test]
+        public async Task LearnCommand_some_words_available()
+        {
+            // Arrange
+            insertNewWord(CreateWord("work", "работа"));
+            insertNewWord(CreateWord("building", "здание"));
+
+            var payload = CreatePayload("/learn");
+
+            // Act
+            var result = await respondAsync(payload);
+
+            // Assert
+            var session = tryFindSession(payload.UserId);
+
+            Assert.IsNotNull(session);
+            // TODO: check if inserted words there
+            Assert.AreEqual(2, session.Words.Count());
+        }
+
+        [Test]
+        public async Task LearnCommand_not_enough_words()
+        {
+            // Arrange
+            var payload = CreatePayload("/learn");
+            
+            // Act
+            var result = await respondAsync(payload);
+
+            // Assert
+            Assert.AreEqual("Not enough words", result);
         }
 
         [Test]
@@ -77,6 +108,41 @@ namespace Tests.Integration
 
             // Assert
             Assert.AreEqual("Help", translation);
+        }
+
+        [Test]
+        public async Task Respond_should_not_add_word_to_dictionary_when_exists()
+        {
+            // Arrange
+            var word = "building";
+            var payload = CreatePayload(word);
+
+            // Act
+            var translation1 = await respondAsync(payload);
+            var translation2 = await respondAsync(payload);
+
+            // Assert
+            Assert.AreEqual(translation1, translation2);
+
+            var words = tryFindWords(word, payload.UserId);
+            Assert.AreEqual(1, words.Count());
+        }
+
+        [Test]
+        public async Task Respond_should_add_word_to_dictionary()
+        {
+            // Arrange
+            var word = "building";
+            var payload = CreatePayload(word);
+
+            // Act
+            var translation = await respondAsync(payload);
+
+            // Assert
+            var savedWord = tryFindWord(word, payload.UserId);
+
+            Assert.IsNotNull(savedWord);
+            Assert.AreEqual(word, savedWord.Word.ToLower());
         }
 
         [Test]
@@ -156,5 +222,8 @@ namespace Tests.Integration
 
         BotPayload CreatePayload(string str) =>
             new BotPayload("test_id", "test_name", str);
+
+        Dictionary CreateWord(string word, string trans) =>
+            new Dictionary("test_id", word, new[] { new Word(trans, 1.0) }, "en", "ru", 0, 0, DateTime.UtcNow, "Tests", "none");
     }
 }
