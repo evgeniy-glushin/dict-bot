@@ -18,7 +18,30 @@ module rec Bot =
             match request with
             | Text _ -> translate payload
             | Command cmd -> execCmd cmd payload.UserId
+            | SessionRunning session -> dealWithSession session payload
         |> Async.StartAsTask     
+
+    let dealWithSession session payload = async {
+        let answer = payload.Text.Trim().ToLower()
+        
+        let res = match session.Words |> Seq.tryItem session.Ptr with 
+                    | None -> "Index out of bounds."
+                    | Some w -> 
+                        let nextPtr = session.Ptr + 1
+                        let isCorrect = w.Trans |> Seq.exists (fun x -> x.Text.ToLower() = answer)
+            
+                        session.Words 
+                        |> Seq.tryItem nextPtr
+                        |> (function 
+                            | Some nextWord -> 
+                                if isCorrect then "Correct! Try the next one <br/> " + nextWord.Word
+                                else "Incorrect! Try the next one <br/> " + nextWord.Word
+                            | None -> 
+                                if isCorrect then "Correct! You are done."
+                                else "Incorrect! You are done.")                  
+        
+        return res
+    }
 
     let execCmd cmd uid = async {
         return     
@@ -29,16 +52,22 @@ module rec Bot =
     }
 
     let startLearningSession uid =
-        let capacity = 4
+        let wordsCount, learned = 4, 4
         
         let words = 
-            popWords capacity uid
+            popWords wordsCount uid learned
             |> Seq.map (fun x -> { Word = x.Word; Trans = x.Trans; Attempts = 0; Succeeded = false })
         
-        { UserId = uid; Step = 0; CreateDate = DateTime.UtcNow; IsActive = true; Words = words }
-        |> insertSession |> ignore
+        match Seq.toList words with
+        | [] -> "Not enough words"
+        | _ -> 
+            { UserId = uid; Ptr = 0; CreateDate = DateTime.UtcNow; ChangeDate = DateTime.UtcNow; IsActive = true; Words = words }
+            |> insertSession |> ignore
 
-        "Not enough words"
+            let first = Seq.head words
+            "Translate following words in English. <br/> " + first.Word.ToLower()
+
+        
 
     let returnA x = async {
         return x

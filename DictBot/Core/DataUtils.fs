@@ -19,12 +19,13 @@ let insertSession session =
     collection.InsertOne session    
     true
 
-let popWords count uid =
+let popWords count uid succeeded =
     let client = buildClient ()
     let db = client.GetDatabase "DictBot"    
     let collection = db.GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
-    let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), uid));
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), uid),
+                                      filter.Lt((fun x -> x.Succeeded), succeeded));
 
     collection.Find(filterDefinition)
               .SortBy(fun x -> x.Succeeded :> Object)
@@ -45,6 +46,11 @@ let tryFindSession uid =
               .Limit(Nullable<int>(1))
               .FirstOrDefault()
 
+let tryFindSessionOpt uid = 
+    let res = tryFindSession uid
+    if isNotNull res then Some res
+    else None
+
 // TODO: return Option type
 let tryFindWord word uid =
     let client = buildClient ()
@@ -57,8 +63,8 @@ let tryFindWord word uid =
 
 let tryFindWordOpt word uid =
     let res = tryFindWord word uid
-    if isNotNull res then Some res  
-    else None 
+    if Object.ReferenceEquals(null, res)  then None 
+    else Some res 
 
 // TODO: consider refactoring
 let tryFindWords word uid =
@@ -100,6 +106,8 @@ let dropDatabase () =
     let db = client.GetDatabase "DictBot"    
     //db.DropCollection "BotRequests"
     db.DropCollection "Dictionary"
+    db.DropCollection "Sessions"
 
-let isNotNull x =
+// TODO: make this really generic
+let isNotNull (x: 'a) =
     Object.ReferenceEquals(null, x) |> not

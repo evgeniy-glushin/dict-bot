@@ -46,8 +46,9 @@ type LearningWord =
 [<BsonIgnoreExtraElements>]
 type LearningSession = 
   { UserId: string
-    Step: int
+    Ptr: int
     CreateDate: DateTime
+    ChangeDate: DateTime
     IsActive: bool
     Words: LearningWord seq }
 
@@ -57,6 +58,7 @@ type LearningSession =
 type RequestType =
     | Command of Command
     | Text of string
+    | SessionRunning of LearningSession
 
 type Command =
     | Start

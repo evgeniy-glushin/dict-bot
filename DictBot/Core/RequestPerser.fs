@@ -2,18 +2,23 @@
 
 open System
 open Domain
+open DataUtils
 
 let detectReqType (payload: BotPayload) =
     // TODO: test null case
-    let txtToTest = payload.Text.Trim().ToLower()
-    match mightBeCommand txtToTest with
-    | Error _ -> Text payload.Text |> Ok 
-    | Ok command -> 
-        ["start", Start; "help", Help; "learn", Learn]
-        |> List.tryFind (fun (txt, _) -> txt = command)
-        |> (function 
-            | Some(_, cmd) -> Command cmd |> Ok
-            | None -> Error "unknown command")
+    // TODO: orElse
+    match tryFindSessionOpt payload.UserId with
+    | Some session -> SessionRunning session |> Ok
+    | None ->
+        let txtToTest = payload.Text.Trim().ToLower()
+        match mightBeCommand txtToTest with
+        | Error _ -> Text payload.Text |> Ok 
+        | Ok command -> 
+            ["start", Start; "help", Help; "learn", Learn]
+            |> List.tryFind (fun (txt, _) -> txt = command)
+            |> (function 
+                | Some(_, cmd) -> Command cmd |> Ok
+                | None -> Error "unknown command")
 
 let mightBeCommand str =
    if startsWith str "/" then 
@@ -24,6 +29,17 @@ let mightBeCommand str =
 
 let startsWith (str: string) test =
     str.StartsWith(test)
+
+ //let session = tryFindSessionOpt (Some payload.UserId)
+ //               match session with
+ //               | None -> translate payload
+ //               | Some s -> 
+ //                   match s.Words |> Seq.tryItem s.Step with 
+ //                   | None -> "Index out of bounds."
+ //                   | Some w -> ""
+ //                       //let isValid = w.Trans |> Seq.exists (fun x -> x.Text.ToLower() = payload.Text)
+ //                   |> returnA               
+                    
 
 //type Parser<'a> = Parser of (string -> Result<'a, string>)
 
