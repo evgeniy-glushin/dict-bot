@@ -21,23 +21,56 @@ module rec Bot =
             | SessionRunning session -> dealWithSession session payload
         |> Async.StartAsTask     
 
+    let newSessionState old succeeded timestamp =
+        let isEnd words =
+            words 
+            |> List.map (fun w -> w.Succeeded)
+            |> List.reduce (fun acc cur -> acc && cur)
+
+        let nextIndex words curIdx =
+            let lastIdx = List.length words - 1
+
+            let rec findNewIdx idx =
+                if idx > lastIdx then findNewIdx 0
+                elif words.[idx].Succeeded then findNewIdx idx + 1
+                else idx
+        
+            curIdx + 1 |> findNewIdx
+
+        let words = Seq.toList old.Words
+        let newWords =
+            List.map (fun w -> 
+                if w = words.[old.Ptr] then { w with Succeeded = succeeded; Attempts = w.Attempts + Convert.ToInt32(succeeded) }
+                else w) words
+        
+        let build isActive idx =
+            { old with Ptr = idx; ChangeDate = timestamp; IsActive = isActive; Words = newWords }
+
+        newWords
+        |> isEnd
+        |> (function 
+            | true -> build false old.Ptr
+            | false -> 
+                nextIndex newWords old.Ptr
+                |> build true)
+
     let dealWithSession session payload = async {
-        let answer = payload.Text.Trim().ToLower()
+        let answer = payload.Text.Trim().ToLower()     
         
         let res = match session.Words |> Seq.tryItem session.Ptr with 
                     | None -> "Index out of bounds."
                     | Some w -> 
-                        let nextPtr = session.Ptr + 1
-                        let isCorrect = w.Trans |> Seq.exists (fun x -> x.Text.ToLower() = answer)
-            
-                        session.Words 
-                        |> Seq.tryItem nextPtr
+                        let succeeded = w.Trans |> Seq.exists (fun x -> x.Text.ToLower() = answer)
+
+                        let newSession = newSessionState session succeeded DateTime.UtcNow |> saveSession
+                        newSession.Words 
+                        |> Seq.tryItem newSession.Ptr
                         |> (function 
                             | Some nextWord -> 
-                                if isCorrect then "Correct! Try the next one <br/> " + nextWord.Word
+                                if succeeded then "Correct! Try the next one <br/> " + nextWord.Word
                                 else "Incorrect! Try the next one <br/> " + nextWord.Word
                             | None -> 
-                                if isCorrect then "Correct! You are done."
+                                if succeeded then "Correct! You are done."
                                 else "Incorrect! You are done.")                  
         
         return res
@@ -66,8 +99,6 @@ module rec Bot =
 
             let first = Seq.head words
             "Translate following words in English. <br/> " + first.Word.ToLower()
-
-        
 
     let returnA x = async {
         return x

@@ -51,6 +51,18 @@ let tryFindSessionOpt uid =
     if isNotNull res then Some res
     else None
 
+let saveSession session =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<LearningSession> "Sessions"
+    let filter = Builders<LearningSession>.Filter
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), session.UserId),
+                                      filter.Eq((fun x -> x.CreateDate), session.CreateDate));
+    let dRes = collection.DeleteOne(filterDefinition)
+    //dRes.IsAcknowledged // TODO: check id deleted
+    collection.InsertOne(session)
+    session
+
 // TODO: return Option type
 let tryFindWord word uid =
     let client = buildClient ()
