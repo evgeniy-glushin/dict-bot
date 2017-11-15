@@ -48,7 +48,7 @@ namespace Tests.Integration
         }
 
         [Test]
-        public async Task LearnCommand_whole_flow()
+        public async Task LearnCommand_whole_flow_with_one_incorrect_attempt()
         {
             // Arrange
             var payload = CreatePayload("/learn");
@@ -56,7 +56,6 @@ namespace Tests.Integration
                 .Select(x => CreateWord(x.Item1, x.Item2));
             words.Select(insertNewWord).ToArray(); // insert
 
-            // Act
             var res1 = await respondAsync(payload);
             Assert.AreEqual("Translate following words in English. <br/> привет", res1);
 
@@ -69,8 +68,11 @@ namespace Tests.Integration
             var res4 = await respondAsync(CreatePayload("work"));
             Assert.AreEqual("Correct! Try the next one <br/> здание", res4);
 
-            var res5 = await respondAsync(CreatePayload("building"));
-            Assert.AreEqual("Correct! You are done.", res5);
+            var res5 = await respondAsync(CreatePayload("bulding"));
+            Assert.AreEqual("Incorrect! Try the next one <br/> здание", res5);
+
+            var res6 = await respondAsync(CreatePayload("building"));
+            Assert.AreEqual("Correct! You are done.", res6);
         }
 
         [Test]

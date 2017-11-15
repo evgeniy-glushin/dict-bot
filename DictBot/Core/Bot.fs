@@ -32,7 +32,7 @@ module rec Bot =
 
             let rec findNewIdx idx =
                 if idx > lastIdx then findNewIdx 0
-                elif words.[idx].Succeeded then findNewIdx idx + 1
+                elif words.[idx].Succeeded then idx + 1 |> findNewIdx
                 else idx
         
             curIdx + 1 |> findNewIdx
@@ -64,14 +64,12 @@ module rec Bot =
 
                         let newSession = newSessionState session succeeded DateTime.UtcNow |> saveSession
                         newSession.Words 
-                        |> Seq.tryItem newSession.Ptr
-                        |> (function 
-                            | Some nextWord -> 
-                                if succeeded then "Correct! Try the next one <br/> " + nextWord.Word
-                                else "Incorrect! Try the next one <br/> " + nextWord.Word
-                            | None -> 
-                                if succeeded then "Correct! You are done."
-                                else "Incorrect! You are done.")                  
+                        |> Seq.toList
+                        |> List.item newSession.Ptr
+                        |> (fun nextWord ->
+                                if newSession.IsActive |> not then "Correct! You are done."
+                                elif succeeded then "Correct! Try the next one <br/> " + nextWord.Word
+                                else "Incorrect! Try the next one <br/> " + nextWord.Word)                       
         
         return res
     }
@@ -86,7 +84,7 @@ module rec Bot =
 
     let startLearningSession uid =
         let wordsCount, learned = 4, 4
-        
+                
         let words = 
             popWords wordsCount uid learned
             |> Seq.map (fun x -> { Word = x.Word; Trans = x.Trans; Attempts = 0; Succeeded = false })
