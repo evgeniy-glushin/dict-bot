@@ -1,7 +1,7 @@
 ﻿module rec Domain
 
 open System
-open MongoDB.Bson.Serialization.Attributes
+open MongoDB.Bson
 
 type BotPayload =  
   { UserId: string 
@@ -20,9 +20,9 @@ type BotRequest =
     ResponseLang: string
     CreateDate: DateTime }
 
-[<BsonIgnoreExtraElements>]
 type Dictionary = 
-  { UserId: string
+  { Id: ObjectId
+    UserId: string
     Word: string 
     Trans: Word seq
     Lang: string
@@ -30,6 +30,7 @@ type Dictionary =
     Trained: int
     Succeeded: int
     CreateDate: DateTime 
+    ChangeDate: DateTime
     Sourse: string
     Version: string }
 
@@ -38,15 +39,16 @@ type Word =
     Score: double }
 
 type LearningWord = 
-  { Word: string
+  { WordId: ObjectId
+    Word: string
     Trans: Word seq
     Succeeded: bool
     Attempts: int }
 
-[<BsonIgnoreExtraElements>]
 type LearningSession = 
-  { UserId: string
-    Ptr: int
+  { Id: ObjectId
+    UserId: string
+    Idx: int
     CreateDate: DateTime
     ChangeDate: DateTime
     IsActive: bool

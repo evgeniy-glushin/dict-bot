@@ -2,9 +2,10 @@
 using System.Threading.Tasks;
 using static Domain;
 using static Core.Bot;
-using static DataUtils;
+using static Data;
 using System.Linq;
 using System;
+using MongoDB.Bson;
 
 namespace Tests.Integration
 {
@@ -15,6 +16,30 @@ namespace Tests.Integration
         public void BeforeEach()
         {
             dropDatabase();
+        }
+
+        [Test]
+        public async Task LearnCommand_updates_word_statistic()
+        {
+            // Arrange
+            var payload = CreatePayload("/learn");
+            var words = (new[] { ("работа", "work"), ("здание", "building"), ("привет", "hello") })
+                .Select(x => CreateWord(x.Item1, x.Item2));
+            words.Select(insertNewWord).ToArray(); // insert
+
+            // Act
+            await respondAsync(payload);
+            await respondAsync(CreatePayload("hello"));
+            await respondAsync(CreatePayload("misspelled building"));
+
+            // Assert
+            var wordToTest1 = tryFindWord("привет", payload.UserId);
+            Assert.AreEqual(1, wordToTest1.Trained);
+            Assert.AreEqual(1, wordToTest1.Succeeded);
+
+            var wordToTest2 = tryFindWord("здание", payload.UserId);
+            Assert.AreEqual(1, wordToTest2.Trained);
+            Assert.AreEqual(0, wordToTest2.Succeeded);
         }
 
         [Test]
@@ -44,11 +69,11 @@ namespace Tests.Integration
             var session = tryFindSession(payload.UserId);
 
             Assert.AreNotEqual(session.CreateDate, session.ChangeDate);
-            Assert.AreEqual(1, session.Ptr);
+            Assert.AreEqual(1, session.Idx);
         }
 
         [Test]
-        public async Task LearnCommand_whole_flow_with_one_incorrect_attempt()
+        public async Task LearnCommand_whole_flow_with_few_incorrect_attempts()
         {
             // Arrange
             var payload = CreatePayload("/learn");
@@ -321,6 +346,6 @@ namespace Tests.Integration
             new BotPayload("test_id", "test_name", str);
 
         Dictionary CreateWord(string word, string trans, int succeeded = 0) =>
-            new Dictionary("test_id", word, new[] { new Word(trans, 1.0) }, "en", "ru", 0, succeeded, DateTime.UtcNow, "Tests", "none");
+            new Dictionary(ObjectId.GenerateNewId(), "test_id", word, new[] { new Word(trans, 1.0) }, "en", "ru", 0, succeeded, DateTime.UtcNow, DateTime.UtcNow, "Tests", "none");
     }
 }

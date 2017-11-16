@@ -3,6 +3,7 @@
 open System
 open Domain
 open DataUtils
+open Data
 
 let detectReqType (payload: BotPayload) =
     // TODO: test null case

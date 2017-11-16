@@ -4,6 +4,7 @@ using static Core.Bot;
 using System.Linq;
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 
 namespace Tests.Unit
 {
@@ -30,7 +31,7 @@ namespace Tests.Unit
             var newSession = newSessionState(oldSession, true, DateTime.UtcNow);
 
             // Assert
-            Assert.AreEqual(0, newSession.Ptr);
+            Assert.AreEqual(0, newSession.Idx);
         }
 
         [Test]
@@ -47,11 +48,11 @@ namespace Tests.Unit
             // Assert
             var oldWords = oldSession.Words.ToList();
             var newWords = newSession.Words.ToList();
-            var oldWord = oldWords[oldSession.Ptr];
-            var newWord = newWords[oldSession.Ptr];
+            var oldWord = oldWords[oldSession.Idx];
+            var newWord = newWords[oldSession.Idx];
 
             Assert.AreEqual(succeeded, newWord.Succeeded);
-            Assert.AreEqual(1, newSession.Ptr);
+            Assert.AreEqual(1, newSession.Idx);
             Assert.AreEqual(oldWord.Attempts + 1, newWord.Attempts);
         }
 
@@ -101,27 +102,27 @@ namespace Tests.Unit
             {
                 var words = new List<LearningWord>()
                 {
-                    new LearningWord("work", new List<Word>()
+                    new LearningWord(ObjectId.GenerateNewId(), "work", new List<Word>()
                     {
                         new Word("работа", 1)
                     }, false, 0),
-                    new LearningWord("building", new List<Word>()
+                    new LearningWord(ObjectId.GenerateNewId(), "building", new List<Word>()
                     {
                         new Word("здание", 1)
                     }, false, 0),
-                    new LearningWord("word1", new List<Word>()
+                    new LearningWord(ObjectId.GenerateNewId(), "word1", new List<Word>()
                     {
                         new Word("word1", 1)
                     }, false, 0)
                 };
 
-                _session = new LearningSession("doesn't matter", 0, DateTime.UtcNow, DateTime.UtcNow, true, words);
+                _session = new LearningSession(ObjectId.GenerateNewId(), "doesn't matter", 0, DateTime.UtcNow, DateTime.UtcNow, true, words);
                 return this;
             }
 
             public SessionBuilder SetLastWordAsCurrent()
             {
-                _session = new LearningSession("doesn't matter", _session.Words.Count() - 1, DateTime.UtcNow, DateTime.UtcNow, true, _session.Words);
+                _session = new LearningSession(ObjectId.GenerateNewId(),"doesn't matter", _session.Words.Count() - 1, DateTime.UtcNow, DateTime.UtcNow, true, _session.Words);
                 return this;
             }
 
@@ -129,11 +130,11 @@ namespace Tests.Unit
             {
                 int lastIdx = _session.Words.Count() - 1;
                 var words = _session.Words.Select((w, idx) => idx == lastIdx ? w : MarkAsSucceeded(w));
-                _session = new LearningSession("doesn't matter", lastIdx, DateTime.UtcNow, DateTime.UtcNow, true, words);
+                _session = new LearningSession(ObjectId.GenerateNewId(), "doesn't matter", lastIdx, DateTime.UtcNow, DateTime.UtcNow, true, words);
                 return this;
 
                 LearningWord MarkAsSucceeded(LearningWord w) =>
-                    new LearningWord(w.Word, w.Trans, true, w.Attempts + 1);
+                    new LearningWord(ObjectId.GenerateNewId(), w.Word, w.Trans, true, w.Attempts + 1);
             }
 
             public LearningSession Create() => _session;

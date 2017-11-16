@@ -3,6 +3,7 @@
 open LanguageServices
 open System.Linq
 open DataUtils
+open Data
 open Domain
 open RequestPerser
 
@@ -11,7 +12,7 @@ module rec Bot =
 
     let respondAsync (payload: BotPayload) =
         let reqTypeRes = detectReqType payload
-
+        
         match reqTypeRes with
         | Error err -> returnA err
         | Ok request -> 
@@ -40,39 +41,50 @@ module rec Bot =
         let words = Seq.toList old.Words
         let newWords =
             List.map (fun w -> 
-                if w = words.[old.Ptr] then { w with Succeeded = succeeded; Attempts = w.Attempts + Convert.ToInt32(succeeded) }
+                if w = words.[old.Idx] then { w with Succeeded = succeeded; Attempts = w.Attempts + Convert.ToInt32(succeeded) }
                 else w) words
         
         let build isActive idx =
-            { old with Ptr = idx; ChangeDate = timestamp; IsActive = isActive; Words = newWords }
+            { old with Idx = idx; ChangeDate = timestamp; IsActive = isActive; Words = newWords }
 
         newWords
         |> isEnd
         |> (function 
-            | true -> build false old.Ptr
+            | true -> build false old.Idx
             | false -> 
-                nextIndex newWords old.Ptr
+                nextIndex newWords old.Idx
                 |> build true)
 
     let dealWithSession session payload = async {
         let answer = payload.Text.Trim().ToLower()     
         
-        let res = match session.Words |> Seq.tryItem session.Ptr with 
+        let res = match session.Words |> Seq.tryItem session.Idx with 
                     | None -> "Index out of bounds."
                     | Some w -> 
                         let succeeded = w.Trans |> Seq.exists (fun x -> x.Text.ToLower() = answer)
 
+                        updateWordStatistic w succeeded |> ignore
+
                         let newSession = newSessionState session succeeded DateTime.UtcNow |> saveSession
-                        newSession.Words 
-                        |> Seq.toList
-                        |> List.item newSession.Ptr
-                        |> (fun nextWord ->
-                                if newSession.IsActive |> not then "Correct! You are done."
-                                elif succeeded then "Correct! Try the next one <br/> " + nextWord.Word
-                                else "Incorrect! Try the next one <br/> " + nextWord.Word)                       
-        
+                        if newSession.IsActive then 
+                            newSession.Words 
+                            |> Seq.toList
+                            |> List.item newSession.Idx
+                            |> (fun nextWord ->
+                                    if succeeded then "Correct! Try the next one <br/> " + nextWord.Word
+                                    else "Incorrect! Try the next one <br/> " + nextWord.Word)                       
+                        else 
+                            // 
+                            "Correct! You are done."
         return res
     }
+
+    let updateWordStatistic learningWord succeeded =
+        let word = findWordById learningWord.WordId 
+        let updatedWord = { word with ChangeDate = DateTime.UtcNow
+                                      Trained = word.Trained + 1
+                                      Succeeded = word.Succeeded + Convert.ToInt32 succeeded }
+        updateWord updatedWord
 
     let execCmd cmd uid = async {
         return     
@@ -87,14 +99,12 @@ module rec Bot =
                 
         let words = 
             popWords wordsCount uid learned
-            |> Seq.map (fun x -> { Word = x.Word; Trans = x.Trans; Attempts = 0; Succeeded = false })
+            |> Seq.map (fun x -> { WordId = x.Id; Word = x.Word; Trans = x.Trans; Attempts = 0; Succeeded = false })
         
         match Seq.toList words with
         | [] -> "Not enough words"
         | _ -> 
-            { UserId = uid; Ptr = 0; CreateDate = DateTime.UtcNow; ChangeDate = DateTime.UtcNow; IsActive = true; Words = words }
-            |> insertSession |> ignore
-
+            buildNewSession uid words |> insertSession |> ignore
             let first = Seq.head words
             "Translate following words in English. <br/> " + first.Word.ToLower()
 
@@ -115,7 +125,7 @@ module rec Bot =
                 | None -> async {
                             let! trans = translateExt correctedSpelling respLang
                             // TODO: check if the word is good enough to save
-                            { UserId = user.Id; Word = correctedSpelling; Trans = [{ Text = trans; Score = 1. }]; Lang = reqLang; TransLang = respLang; Trained = 0; Succeeded = 0; CreateDate = DateTime.UtcNow; Sourse = "Bot"; Version = "Azure V2" }
+                            buildNewWord user.Id correctedSpelling [{ Text = trans; Score = 1. }] reqLang respLang "Bot" "Azure V2"
                             |> insertNewWord |> ignore
                             return trans 
                         }                      
