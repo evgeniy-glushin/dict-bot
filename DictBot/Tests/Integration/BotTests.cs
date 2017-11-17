@@ -1,7 +1,7 @@
 ﻿using NUnit.Framework;
 using System.Threading.Tasks;
 using static Domain;
-using static Core.Bot;
+using static BotAsync;
 using static Data;
 using System.Linq;
 using System;
@@ -17,6 +17,7 @@ namespace Tests.Integration
         {
             dropDatabase();
         }
+            
 
         [Test]
         public async Task LearnCommand_updates_word_statistic()
@@ -213,13 +214,27 @@ namespace Tests.Integration
         }
 
         [Test]
-        public async Task Respond_start_command()
+        public async Task StartCommand_should_ask_the_language()
         {
             // Act
             var translation = await respondAsync(CreatePayload("/start"));
 
             // Assert
-            Assert.AreEqual("Welcome!", translation);
+            Assert.AreEqual("Which language would you like to learn?<br/>Please write 'en' or 'ru'", translation);
+        }
+
+        [Test]
+        public async Task StartCommand_user_should_show_up_in_UsersCollection()
+        {
+            // Act
+            BotPayload payload = CreatePayload("/start");
+            var translation = await respondAsync(payload);
+
+            // Assert
+            var usr = findUser(payload.UserId);
+            Assert.IsNotNull(usr);
+            Assert.AreEqual(payload.UserName, usr.Name);
+            Assert.AreEqual("en", usr.Lang);
         }
 
         [Test]

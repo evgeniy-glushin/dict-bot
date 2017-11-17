@@ -52,13 +52,15 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Async.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="DataUtils.fs" />
     <Compile Include="Data.fs" />
     <Compile Include="RequestPerser.fs" />
     <Compile Include="Bot.fs" />
     <Content Include="packages.config" />
-    <Compile Include="Async.fs" />
+    <Compile Include="DataAsync.fs" />
+    <Compile Include="BotAsync.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="MongoDB.Bson">

@@ -89,7 +89,9 @@ module rec Bot =
     let execCmd cmd uid = async {
         return     
             match cmd with
-            | Start -> "Welcome!"
+            | Start(u) -> 
+                insertUser u |> ignore
+                "Which language would you like to learn?<br/>Please write 'en' or 'ru'"
             | Help -> "Help"
             | Learn -> startLearningSession uid
     }
@@ -117,7 +119,7 @@ module rec Bot =
             let reqLang = detectLang payload.Text
             let respLang = targetLang reqLang
             
-            let user = { Id = payload.UserId; Name = userName payload.UserName }
+            let user = buildUser payload.UserId payload.UserName "en"
             let! correctedSpelling = correctSpelling payload.Text reqLang      
             let! translation =
                 match (tryFindWordOpt correctedSpelling user.Id) with
@@ -129,7 +131,7 @@ module rec Bot =
                             |> insertNewWord |> ignore
                             return trans 
                         }                      
-            
+            // TODO: don't put user everywhere 
             { User = user; Request = payload.Text; Response = translation; RequestLang = reqLang; ResponseLang = respLang; CreateDate = DateTime.UtcNow }
             |> insertRequest |> ignore
 
@@ -146,10 +148,6 @@ module rec Bot =
                 return "Something went wrong! We are already fixing it."
     }
 
-    let userName name =
-        if String.IsNullOrEmpty name then ""
-        else name
-        
     let correctSpelling str lang =
         async {
             let! (spelling: SpellingResponse) = checkSpelling str lang

@@ -15,7 +15,7 @@ let detectReqType (payload: BotPayload) =
         match mightBeCommand txtToTest with
         | Error _ -> Text payload.Text |> Ok 
         | Ok command -> 
-            ["start", Start; "help", Help; "learn", Learn]
+            ["start", Start <| buildUser payload.UserId payload.UserName "en" ; "help", Help; "learn", Learn]
             |> List.tryFind (fun (txt, _) -> txt = command)
             |> (function 
                 | Some(_, cmd) -> Command cmd |> Ok

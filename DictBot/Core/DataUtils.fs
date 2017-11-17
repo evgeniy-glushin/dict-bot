@@ -26,3 +26,13 @@ let buildNewSession uid words =
       CreateDate = DateTime.UtcNow
       ChangeDate = DateTime.UtcNow
       Words = words } 
+
+let buildUser id name defLang =
+    { Id = id
+      Name = if String.IsNullOrEmpty name then "" else name
+      Lang = defLang
+      CreateDate = DateTime.UtcNow
+      ChangeDate = DateTime.UtcNow }
+
+let isNotNull (x: 'a) =
+    Object.ReferenceEquals(null, x) |> not

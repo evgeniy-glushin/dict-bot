@@ -4,6 +4,7 @@ open MongoDB.Driver
 open Domain
 open System
 open System.Configuration
+open DataUtils
 open MongoDB.Bson
 
 // TODO: make all asynchronous 
@@ -11,6 +12,21 @@ open MongoDB.Bson
 // NOTE: isn't working
 //do
 //    Serializers.Register()
+
+
+let findUser uid =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<User> "Users"
+    let filter = Builders<User>.Filter
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.Id), uid));
+    collection.Find(filterDefinition).Limit(Nullable<int>(1)).FirstOrDefault()
+
+let insertUser usr =
+    let client = buildClient ()
+    let db = client.GetDatabase "DictBot"    
+    let collection = db.GetCollection<User> "Users"
+    collection.InsertOne usr  
 
 let insertSession session =
     let client = buildClient ()
@@ -96,8 +112,8 @@ let findWordById id =
 
 let tryFindWordOpt word uid =
     let res = tryFindWord word uid
-    if Object.ReferenceEquals(null, res)  then None 
-    else Some res 
+    if isNotNull res then Some res 
+    else None
 
 // TODO: consider refactoring
 let tryFindWords word uid =
@@ -140,7 +156,5 @@ let dropDatabase () =
     //db.DropCollection "BotRequests"
     db.DropCollection "Dictionary"
     db.DropCollection "Sessions"
-
-// TODO: make this really generic
-let isNotNull (x: 'a) =
-    Object.ReferenceEquals(null, x) |> not
+    db.DropCollection "Dictionary"
+    db.DropCollection "Users"

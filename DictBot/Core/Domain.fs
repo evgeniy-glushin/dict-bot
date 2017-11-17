@@ -10,7 +10,10 @@ type BotPayload =
 
 type User =  
   { Id: string
-    Name: string }
+    Name: string
+    Lang: string
+    CreateDate: DateTime 
+    ChangeDate: DateTime }
 
 type BotRequest =  
   { User: User
@@ -63,10 +66,10 @@ type RequestType =
     | SessionRunning of LearningSession
 
 type Command =
-    | Start
+    | Start of User
     | Help
     | Learn
-    
+
 type LogEntry =  
   { Payload: BotPayload
     Error: string 
