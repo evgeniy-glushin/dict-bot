@@ -18,7 +18,24 @@ namespace Tests.Integration
         {
             dropDatabase();
         }
-            
+
+        [Test]
+        public async Task ChangeLangCommand()
+        {
+            // Arrange
+            var _ = await respondAsync(CreatePayload("/start")); // creates user
+            var lang = "ru";
+            BotPayload payload = CreatePayload($"/setLang {lang}");
+
+            // Act
+            var resp = await respondAsync(payload);
+
+            // Assert
+            Assert.AreEqual($"The language has been changed to {lang}", resp);
+            var usr = findUser(payload.UserId).Value;
+            Assert.AreEqual(lang, usr.Lang);
+        }
+
 
         [Test]
         public async Task LearnCommand_updates_word_statistic()

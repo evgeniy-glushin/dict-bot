@@ -29,12 +29,14 @@ let asyncDetectReqType (payload: BotPayload) = async {
             match mightBeCommand msg with
             | Error _ -> Text payload.Text |> Ok 
             | Ok command -> 
-                let usr = buildUser payload.UserId payload.UserName "en"
-                ["start", Start(usr); "help", Help; "learn", Learn]            
-                |> List.tryFind (fun (cmdTitle, _) -> cmdTitle = command)
-                |> (function 
-                    | Some(_, cmd) -> Command cmd |> Ok
-                    | None -> Error "unknown command")
+                match command with
+                | "start" -> 
+                    let u = buildUser payload.UserId payload.UserName "en"
+                    Command (Start u) |> Ok
+                | "help" -> Command Help |> Ok
+                | "learn" -> Command Learn |> Ok
+                //| "setlang" -> 
+                | _ -> Error "unknown command"
 
     return res
 }
