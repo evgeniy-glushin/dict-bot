@@ -53,14 +53,14 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Async.fs" />
+    <Compile Include="AsyncResult.fs" />
     <Compile Include="Domain.fs" />
+    <Compile Include="LanguageServices.fs" />
     <Compile Include="DataUtils.fs" />
-    <Compile Include="Data.fs" />
-    <Compile Include="RequestPerser.fs" />
-    <Compile Include="Bot.fs" />
     <Content Include="packages.config" />
-    <Compile Include="DataAsync.fs" />
-    <Compile Include="BotAsync.fs" />
+    <Compile Include="Data.fs" />
+    <Compile Include="Bot.fs" />
+    <Compile Include="Repository.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="MongoDB.Bson">

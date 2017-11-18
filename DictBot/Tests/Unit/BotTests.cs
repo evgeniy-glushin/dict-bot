@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 using static Domain;
-using static BotAsync;
+using static Bot;
 using System.Linq;
 using System;
 using System.Collections.Generic;

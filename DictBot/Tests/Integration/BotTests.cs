@@ -1,8 +1,9 @@
 ﻿using NUnit.Framework;
 using System.Threading.Tasks;
 using static Domain;
-using static BotAsync;
+using static Bot;
 using static Data;
+using static Repository;
 using System.Linq;
 using System;
 using MongoDB.Bson;
@@ -34,11 +35,11 @@ namespace Tests.Integration
             await respondAsync(CreatePayload("misspelled building"));
 
             // Assert
-            var wordToTest1 = tryFindWord("привет", payload.UserId);
+            var wordToTest1 = tryFindWord("привет", payload.UserId).Value;
             Assert.AreEqual(1, wordToTest1.Trained);
             Assert.AreEqual(1, wordToTest1.Succeeded);
 
-            var wordToTest2 = tryFindWord("здание", payload.UserId);
+            var wordToTest2 = tryFindWord("здание", payload.UserId).Value;
             Assert.AreEqual(1, wordToTest2.Trained);
             Assert.AreEqual(0, wordToTest2.Succeeded);
         }
@@ -67,7 +68,7 @@ namespace Tests.Integration
             await respondAsync(CreatePayload("hello"));
 
             // Assert
-            var session = tryFindSession(payload.UserId);
+            var session = tryFindSession(payload.UserId).Value;
 
             Assert.AreNotEqual(session.CreateDate, session.ChangeDate);
             Assert.AreEqual(1, session.Idx);
@@ -134,7 +135,7 @@ namespace Tests.Integration
             var result = await respondAsync(payload);
 
             // Assert
-            var session = tryFindSession(payload.UserId);
+            var session = tryFindSession(payload.UserId).Value;
             Assert.IsNotNull(session);
             Assert.AreEqual(4, session.Words.Count());
         }
@@ -164,10 +165,10 @@ namespace Tests.Integration
             var result = await respondAsync(payload);
 
             // Assert
-            var session = tryFindSession(payload.UserId);
+            var hasSession = tryFindSession(payload.UserId).HasValue;
 
-            Assert.IsNull(session);
-            Assert.AreEqual("Not enough words", result);
+            Assert.False(hasSession);
+            Assert.AreEqual("Not enough words.", result);
         }
 
         [Test]
@@ -183,7 +184,7 @@ namespace Tests.Integration
             var _ = await respondAsync(payload);
 
             // Assert
-            var session = tryFindSession(payload.UserId);
+            var session = tryFindSession(payload.UserId).Value;
             Assert.IsNotNull(session);
             Assert.AreEqual(words.Count(), session.Words.Count());
             var allInSession = words.All(w => session.Words.Any(x => x.Word == w.Word));
@@ -200,7 +201,7 @@ namespace Tests.Integration
             var result = await respondAsync(payload);
 
             // Assert
-            Assert.AreEqual("Not enough words", result);
+            Assert.AreEqual("Not enough words.", result);
         }
 
         [Test]
@@ -231,7 +232,7 @@ namespace Tests.Integration
             var translation = await respondAsync(payload);
 
             // Assert
-            var usr = findUser(payload.UserId);
+            var usr = findUser(payload.UserId).Value;
             Assert.IsNotNull(usr);
             Assert.AreEqual(payload.UserName, usr.Name);
             Assert.AreEqual("en", usr.Lang);
@@ -276,7 +277,7 @@ namespace Tests.Integration
             var translation = await respondAsync(payload);
 
             // Assert
-            var savedWord = tryFindWord(word, payload.UserId);
+            var savedWord = tryFindWord(word, payload.UserId).Value;
 
             Assert.IsNotNull(savedWord);
             Assert.AreEqual(word, savedWord.Word.ToLower());

@@ -1,160 +1,157 @@
-﻿module rec Data
+﻿module Data
 
 open MongoDB.Driver
 open Domain
 open System
 open System.Configuration
 open DataUtils
-open MongoDB.Bson
+open System.Linq
+    
+let private db () =
+    let conStr = ConfigurationManager.AppSettings.["ConString"]
+    let client = MongoClient(conStr)
+    client.GetDatabase "DictBot"
 
-// TODO: make all asynchronous 
+let checkIfFound msg x =
+    if isNotNull x then Ok x
+    else Error msg
 
-// NOTE: isn't working
-//do
-//    Serializers.Register()
-
-
-let findUser uid =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<User> "Users"
+let asyncFindUser uid = async {
+    let collection = db().GetCollection<User> "Users"
     let filter = Builders<User>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.Id), uid));
-    collection.Find(filterDefinition).Limit(Nullable<int>(1)).FirstOrDefault()
+    let! users = collection.Find(filterDefinition).Limit(Nullable<int>(1)).ToListAsync() |> Async.AwaitTask
+    return users.FirstOrDefault() 
+            |> checkIfFound (sprintf "Couldn't find user with id %s" uid)
+}
 
-let insertUser usr =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<User> "Users"
-    collection.InsertOne usr  
+let asyncInsertUser usr = async {
+    let collection = db().GetCollection<User> "Users"
+    do! collection.InsertOneAsync usr |> Async.AwaitTask
+    return Ok usr    
+}
 
-let insertSession session =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<LearningSession> "Sessions"
-    collection.InsertOne session    
-    true
+let asyncInsertSession session = async {
+    let collection = db().GetCollection<LearningSession> "Sessions"
+    do! collection.InsertOneAsync session |> Async.AwaitTask    
+    return Ok session
+}
 
-let popWords count uid succeeded =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<Dictionary> "Dictionary"
+let asyncPopWords count uid succeededThreshold = async {
+    let collection = db().GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), uid),
-                                      filter.Lt((fun x -> x.Succeeded), succeeded));
+                                      filter.Lt((fun x -> x.Succeeded), succeededThreshold));
 
-    collection.Find(filterDefinition)
-              .SortBy(fun x -> x.Succeeded :> Object)
-              .ThenByDescending(fun x -> x.CreateDate :> Object)
-              .Limit(Nullable<int>(count))
-              .ToEnumerable()
+    let! words = collection.Find(filterDefinition)
+                    .SortBy(fun x -> x.Succeeded :> Object)
+                    .ThenByDescending(fun x -> x.CreateDate :> Object)
+                    .Limit(Nullable<int>(count))
+                    .ToListAsync() |> Async.AwaitTask
 
-let tryFindSession uid =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<LearningSession> "Sessions"
+    return
+        match words.AsEnumerable() |> Seq.toList with
+        | [] -> Error <| "Not enough words."
+        | list -> Ok list
+}
+
+let asyncTryFindSession uid = async {
+    let collection = db().GetCollection<LearningSession> "Sessions"
     let filter = Builders<LearningSession>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), uid),
                                       filter.Eq((fun x -> x.IsActive), true));
 
-    collection.Find(filterDefinition)
-              .SortByDescending(fun x -> x.CreateDate :> Object)
-              .Limit(Nullable<int>(1))
-              .FirstOrDefault()
+    let! sessions = collection.Find(filterDefinition)
+                      .SortByDescending(fun x -> x.CreateDate :> Object)
+                      .Limit(Nullable<int>(1))
+                      .ToListAsync() |> Async.AwaitTask
+    
+    return sessions.FirstOrDefault() 
+            |> checkIfFound (sprintf "Couldn't find session for user with id %s." uid)
+}
 
-let tryFindSessionOpt uid = 
-    let res = tryFindSession uid
-    if isNotNull res then Some res
-    else None
-
-let saveSession session =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<LearningSession> "Sessions"
+let asyncSaveSession session = async {
+    let collection = db().GetCollection<LearningSession> "Sessions"
     let filter = Builders<LearningSession>.Filter
-    let filterDefinition = filter.And(filter.Eq((fun x -> x.UserId), session.UserId),
-                                      filter.Eq((fun x -> x.CreateDate), session.CreateDate));
-    let dRes = collection.DeleteOne(filterDefinition)
-    //dRes.IsAcknowledged // TODO: check id deleted
-    collection.InsertOne(session)
-    session
+    let filterDefinition = filter.And(filter.Eq((fun x -> x.Id), session.Id));
+    let! dRes = collection.DeleteOneAsync(filterDefinition) |> Async.AwaitTask
+    if dRes.IsAcknowledged then
+        do! collection.InsertOneAsync(session) |> Async.AwaitTask
+        return Ok session
+    else 
+        return Error <| sprintf "Couldn't delete session %A." session.Id
+}
 
-let updateWord (word: Dictionary) =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<Dictionary> "Dictionary"
+let asyncUpdateWord (word: Dictionary) = async {
+    let collection = db().GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter.Eq((fun x -> x.Id), word.Id)
     let update = Builders<Dictionary>.Update.Set((fun x -> x.Trained), word.Trained)
                                             .Set((fun x -> x.Succeeded), word.Succeeded)
                                             .Set((fun x -> x.ChangeDate), word.ChangeDate)
 
-    collection.UpdateOne(filter, update) |> ignore
+    let! uRes = collection.UpdateOneAsync(filter, update) |> Async.AwaitTask
 
-    true
+    if (int)uRes.ModifiedCount = 1 then return Ok word
+    else return Error <| sprintf "Couldn't update word %A." word.Id
+}
 
-// TODO: return Option type
-let tryFindWord word uid =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<Dictionary> "Dictionary"
+let asyncTryFindWord word uid = async {
+    let collection = db().GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word),
                                       filter.Eq((fun x -> x.UserId), uid));
-    collection.Find(filterDefinition).Limit(Nullable<int>(1)).FirstOrDefault()
+    let! words = collection.Find(filterDefinition).Limit(Nullable<int>(1)).ToListAsync() |> Async.AwaitTask
+    return words.FirstOrDefault()
+           |> checkIfFound (sprintf "Couldn't find word %s for user %s" word uid) 
+}
 
-let findWordById id =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<Dictionary> "Dictionary"
+let asyncFindWordById id = async {
+    let collection = db().GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.Id), id));
-    collection.Find(filterDefinition).Limit(Nullable<int>(1)).FirstOrDefault()
+    let! words = collection.Find(filterDefinition).Limit(Nullable<int>(1)).ToListAsync() |> Async.AwaitTask
+    return words.FirstOrDefault()
+           |> checkIfFound (sprintf "Couldn't find word %A" id)
+}
 
-let tryFindWordOpt word uid =
-    let res = tryFindWord word uid
-    if isNotNull res then Some res 
-    else None
+let asyncInsertNewWord word = async {    
+    let collection = db().GetCollection<Dictionary> "Dictionary"
+    do! collection.InsertOneAsync word |> Async.AwaitTask
+    return Ok word
+}
 
-// TODO: consider refactoring
+let insertLogEntry entry =    
+    let collection = db().GetCollection<LogEntry> "Logs"     
+    collection.InsertOne entry    
+    true
+
+let insertRequest req =
+    let db = db ()    
+    let collection = db.GetCollection<BotRequest> "BotRequests"
+    collection.InsertOne req
+    true   
+
+// for testing only
 let tryFindWords word uid =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<Dictionary> "Dictionary"
+    let collection = db().GetCollection<Dictionary> "Dictionary"
     let filter = Builders<Dictionary>.Filter
     let filterDefinition = filter.And(filter.Eq((fun x -> x.Word), word),
                                       filter.Eq((fun x -> x.UserId), uid));
     collection.Find(filterDefinition).ToEnumerable()
 
-let insertNewWord word =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<Dictionary> "Dictionary"
-    collection.InsertOne word    
-    true
-
-let insertLogEntry entry =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<LogEntry> "Logs"     
-    collection.InsertOne entry    
-    true
-
-let insertRequest req =
-    let client = buildClient ()
-    let db = client.GetDatabase "DictBot"    
-    let collection = db.GetCollection<BotRequest> "BotRequests"
-    collection.InsertOne req
-    true   
-    
-let private buildClient (): MongoClient =
-    let conStr = ConfigurationManager.AppSettings.["ConString"]
-    MongoClient(conStr) // TODO: add real string for prod
-
 let dropDatabase () =
-    let client = MongoClient()
-    let db = client.GetDatabase "DictBot"    
+    let db = db()    
     //db.DropCollection "BotRequests"
     db.DropCollection "Dictionary"
     db.DropCollection "Sessions"
     db.DropCollection "Dictionary"
     db.DropCollection "Users"
+
+
+//let tryCatch f =
+//    try
+//        f() |> Ok
+//    with
+//        | Failure msg -> Error msg
+
+//let (>>=) x f = Result.bind f x

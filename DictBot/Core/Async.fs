@@ -32,15 +32,7 @@ let bind f xAsync = async {
     // as f will return an Async
     return! f x
     }
-
-
-// TODO LIST:
-// 1. watch PS
-// 4. Re-factor the existing code
-// 2. Read articles about monads 
-// 3. Look into docs of telegram bot - test buttons
-// 5. Add needed features
-// 6. Add user friendly error messages
+    
 
 
 
